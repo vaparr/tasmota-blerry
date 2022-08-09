@@ -70,7 +70,7 @@ class blerry_helpers
   static def read_config()
     var config
     #If a URL was set, try to download, and save before opening.
-    blerry_helpers.download_config()
+    blerry_helpers.download_config("blerry_configurl.txt")
     if path.exists("blerry_config.json")
       var f = open("blerry_config.json", "r")
       config = json.load(f.read())
@@ -135,48 +135,13 @@ class blerry_helpers
 
   static def cmd_url_config(cmd, idx, url)
     if string.find(url,'http',0,4)
-
-    else
       print('BLY: URL does not start with http(s)', url)
       return false
+    else
 
+    end
     blerry_helpers.write_url(url)
     tasmota.resp_cmnd_done()
-  end
-
-
-  static def download_config()
-    var url
-
-    if path.exists("blerry_configurl.txt")
-      var u = open("blerry_configurl.txt", "r")
-      url = u.read()
-    else
-      return
-    end
-
-    var cl = webclient()
-    cl.begin(url)
-    var r = cl.GET()
-    if r != 200
-      print('BLY: Could not download config from:', url)
-      return false
-    end
-    var s = cl.get_string()
-    cl.close()
-    
-    val = json.load(s)
-
-    if isinstance(val, map)
-      var f = open("blerry_config.json", 'w')
-      f.write(s)
-      f.close()
-      return true
-    else
-      print('BLY: Data from:', url, 'is not valid json:', s)
-      return false
-    end
-    return true
   end
 
   static def download_file(file_name, url)
@@ -198,6 +163,40 @@ class blerry_helpers
   static def download_driver(driver_fname)
     var url = 'https://raw.githubusercontent.com/tony-fav/tasmota-blerry/main/blerry/drivers/' + driver_fname
     return blerry_helpers.download_file(driver_fname, url)
+  end
+
+  static def download_config(filename)
+    var url
+
+    if path.exists(filename)
+      var u = open(filename, "r")
+      url = u.read()
+    else
+      return
+    end
+
+    var cl = webclient()
+    cl.begin(url)
+    var r = cl.GET()
+    if r != 200
+      print('BLY: Could not download config from:', url)
+      return false
+    end
+    var s = cl.get_string()
+    cl.close()
+    
+    var val = json.load(s)
+
+    if isinstance(val, map)
+      var f = open("blerry_config.json", 'w')
+      f.write(s)
+      f.close()
+      return true
+    else
+      print('BLY: Data from:', url, 'is not valid json:', s)
+      return false
+    end
+    return true
   end
 
   static def ensure_driver_exists(driver_fname)
@@ -763,6 +762,7 @@ class Blerry
   def load_user_config()  # based on persist module
     var f
     var val
+    blerry_helpers.download_config("blerry_configurl.txt")
     if path.exists("blerry_config.json")
       try
         f = open("blerry_config.json", "r")
